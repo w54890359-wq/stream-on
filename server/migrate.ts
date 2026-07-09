@@ -1,6 +1,6 @@
 import { pool } from './db.js'
 
-    export async function runMigrations() {
+    export async function migrate() {
     const client = await pool.connect()
     try {
       await client.query(`
