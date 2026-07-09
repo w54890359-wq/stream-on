@@ -1,12 +1,11 @@
 import pg from 'pg'
 
-const { Pool } = pg
+    const { Pool } = pg
 
-if (!process.env.DATABASE_URL) {
-  throw new Error('DATABASE_URL is required')
-}
+    const connStr = (process.env.DATABASE_URL || '').replace('channel_binding=require&', '').replace('&channel_binding=require', '')
 
-export const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false },
-})
+    export const pool = new Pool({
+    connectionString: connStr || process.env.DATABASE_URL,
+    ssl: { rejectUnauthorized: false },
+    })
+    
