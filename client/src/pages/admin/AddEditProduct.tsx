@@ -1,235 +1,195 @@
 import { useEffect, useRef, useState } from 'react'
-import { useLocation, useParams } from 'wouter'
-import { createProduct, updateProduct, getAdminProducts, type Product } from '../../lib/api'
+    import { useLocation, useParams } from 'wouter'
+    import { createProduct, updateProduct, getAdminProducts, type Product } from '../../lib/api'
 
-const DURATIONS = ['1 mes', '2 meses', '3 meses', '6 meses', '1 año', '2 años']
+    const ACCOUNT_DURATION_OPTIONS = ['1 mes', '2 meses', '3 meses', '6 meses', '12 meses', 'Vitalicio']
 
-const empty = {
-  name: '', service: '', type: 'cuenta_completa' as const,
-  price: 0, accountDuration: '1 mes', guaranteeDays: 30,
-  features: '', whatsappMessage: '', imageBase64: null as string | null, active: true,
-}
+    export default function AddEditProduct() {
+    const { id } = useParams<{ id: string }>()
+    const [, navigate] = useLocation()
+    const isEdit = !!id
 
-export default function AddEditProduct() {
-  const params = useParams<{ id?: string }>()
-  const [, navigate] = useLocation()
-  const isEdit = Boolean(params.id)
-  const [form, setForm] = useState(empty)
-  const [preview, setPreview] = useState<string | null>(null)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-  const fileRef = useRef<HTMLInputElement>(null)
+    const [form, setForm] = useState({
+      name: '',
+      service: '',
+      type: 'cuenta_completa' as 'cuenta_completa' | 'perfil',
+      price: '',
+      accountDuration: '1 mes',
+      guaranteeDuration: '30 días',
+      features: '',
+      whatsappMessage: '',
+    })
+    const [imageBase64, setImageBase64] = useState<string | null>(null)
+    const [imagePreview, setImagePreview] = useState<string | null>(null)
+    const [saving, setSaving] = useState(false)
+    const [error, setError] = useState('')
+    const fileRef = useRef<HTMLInputElement>(null)
 
-  useEffect(() => {
-    if (isEdit && params.id) {
-      getAdminProducts().then(prods => {
-        const p = prods.find(x => x.id === parseInt(params.id!))
-        if (p) {
+    useEffect(() => {
+      if (isEdit) {
+        getAdminProducts().then(products => {
+          const p = products.find(x => x.id === parseInt(id!))
+          if (!p) return
           setForm({
-            name: p.name, service: p.service, type: p.type,
-            price: p.price, accountDuration: p.accountDuration,
-            guaranteeDays: p.guaranteeDays,
+            name: p.name,
+            service: p.service,
+            type: p.type,
+            price: String(p.price),
+            accountDuration: p.accountDuration || '1 mes',
+            guaranteeDuration: p.guaranteeDuration || '30 días',
             features: p.features.join('\n'),
             whatsappMessage: p.whatsappMessage,
-            imageBase64: p.imageBase64,
-            active: p.active,
           })
-          if (p.imageBase64) setPreview(p.imageBase64)
+          if (p.imageBase64) setImagePreview(p.imageBase64)
+        })
+      }
+    }, [id])
+
+    const handleImage = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0]
+      if (!file) return
+      const reader = new FileReader()
+      reader.onload = ev => {
+        const result = ev.target?.result as string
+        setImageBase64(result)
+        setImagePreview(result)
+      }
+      reader.readAsDataURL(file)
+    }
+
+    const handleSubmit = async (e: React.FormEvent) => {
+      e.preventDefault()
+      setSaving(true)
+      setError('')
+      try {
+        const data: Partial<Product> = {
+          name: form.name,
+          service: form.service,
+          type: form.type,
+          price: parseFloat(form.price) || 0,
+          accountDuration: form.accountDuration,
+          guaranteeDuration: form.guaranteeDuration,
+          features: form.features.split('\n').map(f => f.trim()).filter(Boolean),
+          whatsappMessage: form.whatsappMessage,
+          ...(imageBase64 ? { imageBase64 } : {}),
         }
-      })
-    }
-  }, [params.id])
-
-  const handleImage = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    if (file.size > 5 * 1024 * 1024) { setError('La imagen debe ser menor a 5MB'); return }
-    const reader = new FileReader()
-    reader.onload = ev => {
-      const b64 = ev.target?.result as string
-      setForm(f => ({ ...f, imageBase64: b64 }))
-      setPreview(b64)
-    }
-    reader.readAsDataURL(file)
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError('')
-    setLoading(true)
-    try {
-      const data: Partial<Product> = {
-        ...form,
-        features: (form.features as unknown as string).split('\n').map(s => s.trim()).filter(Boolean),
-        price: parseFloat(form.price as unknown as string),
-        guaranteeDays: parseInt(form.guaranteeDays as unknown as string, 10),
+        if (isEdit) {
+          await updateProduct(parseInt(id!), data)
+        } else {
+          await createProduct(data)
+        }
+        navigate('/admin/products')
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : 'Error al guardar')
+      } finally {
+        setSaving(false)
       }
-      if (isEdit && params.id) {
-        await updateProduct(parseInt(params.id), data)
-      } else {
-        await createProduct(data)
-      }
-      navigate('/admin/products')
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Error al guardar')
-    } finally {
-      setLoading(false)
     }
-  }
 
-  const field = (label: string, node: React.ReactNode, note?: string) => (
-    <div>
-      <label style={{ color: '#94A3B8', fontSize: 13, fontWeight: 500, marginBottom: 6, display: 'block' }}>{label}</label>
-      {node}
-      {note && <p style={{ color: '#64748B', fontSize: 12, marginTop: 4 }}>{note}</p>}
-    </div>
-  )
+    const labelStyle = { fontSize: 13, fontWeight: 600, color: '#94A3B8', marginBottom: 6, display: 'block' }
+    const inputStyle = { background: '#0F172A', border: '1px solid #334155', color: '#F1F5F9', borderRadius: 8, padding: '10px 14px', width: '100%', fontSize: 14, outline: 'none' }
+    const selectStyle = { ...inputStyle, cursor: 'pointer' }
 
-  return (
-    <div style={{ maxWidth: 700 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 32 }}>
-        <button onClick={() => navigate('/admin/products')} style={{
-          background: '#1E293B', border: '1px solid #334155', borderRadius: 8,
-          padding: '8px 12px', cursor: 'pointer', color: '#94A3B8',
-          display: 'flex', alignItems: 'center', gap: 6, fontSize: 14,
-        }}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M19 12H5m7-7-7 7 7 7"/>
-          </svg>
-          Volver
-        </button>
-        <h1 style={{ color: 'white', fontSize: 26, fontWeight: 800 }}>
-          {isEdit ? 'Editar Producto' : 'Agregar Producto'}
+    return (
+      <div style={{ maxWidth: 640, margin: '0 auto', padding: '24px 16px' }}>
+        <h1 style={{ fontSize: 22, fontWeight: 700, color: '#F1F5F9', marginBottom: 24 }}>
+          {isEdit ? 'Editar producto' : 'Agregar producto'}
         </h1>
-      </div>
 
-      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-          {field('Nombre del producto *',
-            <input className="admin-input" value={form.name}
-              onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-              placeholder="ej: Netflix Premium 4K" required />
-          )}
-          {field('Servicio',
-            <input className="admin-input" value={form.service}
-              onChange={e => setForm(f => ({ ...f, service: e.target.value }))}
-              placeholder="ej: Netflix, HBO Max" />
-          )}
-        </div>
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-          {field('Tipo de cuenta',
-            <select className="admin-input" value={form.type}
-              onChange={e => setForm(f => ({ ...f, type: e.target.value as 'cuenta_completa' | 'perfil' }))}
-              style={{ cursor: 'pointer' }}>
-              <option value="cuenta_completa">Cuenta Completa</option>
-              <option value="perfil">Perfil</option>
-            </select>
-          )}
-          {field('Precio (USD) *',
-            <input className="admin-input" type="number" step="0.01" min="0"
-              value={form.price}
-              onChange={e => setForm(f => ({ ...f, price: parseFloat(e.target.value) || 0 }))}
-              placeholder="ej: 9.99" required />
-          )}
-        </div>
+          {/* Nombre */}
+          <div>
+            <label style={labelStyle}>Nombre del producto *</label>
+            <input style={inputStyle} value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} required placeholder="Ej: Netflix Premium" />
+          </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-          {field('Tiempo de la cuenta *',
-            <select className="admin-input" value={form.accountDuration}
-              onChange={e => setForm(f => ({ ...f, accountDuration: e.target.value }))}
-              style={{ cursor: 'pointer' }}>
-              {DURATIONS.map(d => <option key={d} value={d}>{d}</option>)}
-              <option value="otro">Otro...</option>
-            </select>
-          )}
-          {field('Días de garantía',
-            <input className="admin-input" type="number" min="0"
-              value={form.guaranteeDays}
-              onChange={e => setForm(f => ({ ...f, guaranteeDays: parseInt(e.target.value) || 0 }))}
-              placeholder="30" />
-          )}
-        </div>
+          {/* Servicio */}
+          <div>
+            <label style={labelStyle}>Servicio / Plataforma</label>
+            <input style={inputStyle} value={form.service} onChange={e => setForm(f => ({ ...f, service: e.target.value }))} placeholder="Ej: Netflix, Disney+, HBO Max..." />
+          </div>
 
-        {field('Lo que incluye (uno por línea)',
-          <textarea className="admin-input" rows={5}
-            value={form.features as unknown as string}
-            onChange={e => setForm(f => ({ ...f, features: e.target.value }))}
-            placeholder={'Acceso completo al correo\nFull stock\nSin restricciones'} />
-        )}
-
-        {field('Mensaje de WhatsApp *',
-          <textarea className="admin-input" rows={3}
-            value={form.whatsappMessage}
-            onChange={e => setForm(f => ({ ...f, whatsappMessage: e.target.value }))}
-            placeholder="Hola, vengo de tu sitio web, me interesa comprar..." />,
-          '⚠️ Escribe SOLO el texto del mensaje. El número se configura en Configuración.'
-        )}
-
-        {/* Image upload */}
-        <div>
-          <label style={{ color: '#94A3B8', fontSize: 13, fontWeight: 500, marginBottom: 6, display: 'block' }}>
-            Imagen del servicio
-          </label>
-          <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
-            <div
-              onClick={() => fileRef.current?.click()}
-              style={{
-                width: 120, height: 80, border: '2px dashed #334155',
-                borderRadius: 10, cursor: 'pointer', display: 'flex',
-                alignItems: 'center', justifyContent: 'center',
-                background: '#0F172A', overflow: 'hidden', flexShrink: 0,
-              }}
-            >
-              {preview ? (
-                <img src={preview} style={{ width: '100%', height: '100%', objectFit: 'contain', padding: 8 }} />
-              ) : (
-                <div style={{ textAlign: 'center', color: '#475569' }}>
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ margin: '0 auto 4px' }}>
-                    <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/>
-                    <polyline points="21 15 16 10 5 21"/>
-                  </svg>
-                  <p style={{ fontSize: 11 }}>Subir imagen</p>
-                </div>
-              )}
+          {/* Tipo y Precio */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div>
+              <label style={labelStyle}>Tipo de cuenta</label>
+              <select style={selectStyle} value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value as 'cuenta_completa' | 'perfil' }))}>
+                <option value="cuenta_completa">Cuenta completa</option>
+                <option value="perfil">Perfil</option>
+              </select>
             </div>
             <div>
-              <button type="button" onClick={() => fileRef.current?.click()}
-                style={{
-                  background: '#1E293B', border: '1px solid #334155', borderRadius: 8,
-                  padding: '9px 16px', cursor: 'pointer', color: '#94A3B8', fontSize: 13,
-                }}>
-                Elegir archivo
-              </button>
-              <p style={{ color: '#64748B', fontSize: 12, marginTop: 6 }}>PNG, JPG o WebP. Máx 5MB.</p>
+              <label style={labelStyle}>Precio ($) *</label>
+              <input style={inputStyle} type="number" step="0.01" min="0" value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))} required placeholder="0.00" />
             </div>
+          </div>
+
+          {/* Tiempo de cuenta y Garantía */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div>
+              <label style={labelStyle}>Tiempo de la cuenta</label>
+              <select style={selectStyle} value={form.accountDuration} onChange={e => setForm(f => ({ ...f, accountDuration: e.target.value }))}>
+                {ACCOUNT_DURATION_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
+              </select>
+            </div>
+            <div>
+              <label style={labelStyle}>Tiempo de garantía</label>
+              <input style={inputStyle} value={form.guaranteeDuration} onChange={e => setForm(f => ({ ...f, guaranteeDuration: e.target.value }))} placeholder="Ej: 30 días, 1 mes..." />
+            </div>
+          </div>
+
+          {/* Características */}
+          <div>
+            <label style={labelStyle}>Características (una por línea)</label>
+            <textarea
+              style={{ ...inputStyle, minHeight: 100, resize: 'vertical', fontFamily: 'inherit' }}
+              value={form.features}
+              onChange={e => setForm(f => ({ ...f, features: e.target.value }))}
+              placeholder="Pantallas en HD\nSin anuncios\nAcceso completo..."
+            />
+          </div>
+
+          {/* Mensaje WhatsApp */}
+          <div>
+            <label style={labelStyle}>Mensaje de WhatsApp</label>
+            <textarea
+              style={{ ...inputStyle, minHeight: 80, resize: 'vertical', fontFamily: 'inherit' }}
+              value={form.whatsappMessage}
+              onChange={e => setForm(f => ({ ...f, whatsappMessage: e.target.value }))}
+              placeholder="Hola! Me interesa el plan Netflix Premium..."
+            />
+          </div>
+
+          {/* Imagen */}
+          <div>
+            <label style={labelStyle}>Imagen del producto</label>
+            {imagePreview && (
+              <div style={{ marginBottom: 10 }}>
+                <img src={imagePreview} alt="preview" style={{ maxHeight: 120, borderRadius: 8, border: '1px solid #334155' }} />
+              </div>
+            )}
+            <button type="button" onClick={() => fileRef.current?.click()}
+              style={{ background: '#1E293B', border: '1px dashed #475569', color: '#94A3B8', borderRadius: 8, padding: '10px 20px', cursor: 'pointer', fontSize: 14 }}>
+              {imagePreview ? 'Cambiar imagen' : 'Subir imagen'}
+            </button>
             <input ref={fileRef} type="file" accept="image/*" onChange={handleImage} style={{ display: 'none' }} />
           </div>
-        </div>
 
-        {error && (
-          <div style={{
-            background: 'rgba(220,38,38,0.1)', border: '1px solid rgba(220,38,38,0.3)',
-            borderRadius: 8, padding: '10px 14px', color: '#FCA5A5', fontSize: 13,
-          }}>
-            {error}
+          {error && <p style={{ color: '#F87171', fontSize: 13 }}>{error}</p>}
+
+          <div style={{ display: 'flex', gap: 12, paddingTop: 8 }}>
+            <button type="submit" disabled={saving}
+              style={{ background: 'linear-gradient(135deg, #8B5CF6, #6D28D9)', color: 'white', border: 'none', borderRadius: 8, padding: '12px 28px', fontWeight: 700, fontSize: 15, cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1 }}>
+              {saving ? 'Guardando...' : isEdit ? 'Guardar cambios' : 'Agregar producto'}
+            </button>
+            <button type="button" onClick={() => navigate('/admin/products')}
+              style={{ background: '#1E293B', color: '#94A3B8', border: '1px solid #334155', borderRadius: 8, padding: '12px 20px', fontWeight: 600, fontSize: 14, cursor: 'pointer' }}>
+              Cancelar
+            </button>
           </div>
-        )}
-
-        <div style={{ display: 'flex', gap: 12, paddingTop: 8 }}>
-          <button type="submit" className="btn-primary" disabled={loading}
-            style={{ padding: '12px 28px', fontSize: 15 }}>
-            {loading ? 'Guardando...' : isEdit ? 'Actualizar producto' : 'Agregar producto'}
-          </button>
-          <button type="button" onClick={() => navigate('/admin/products')}
-            style={{
-              background: 'none', border: '1px solid #334155', borderRadius: 8,
-              padding: '12px 20px', cursor: 'pointer', color: '#94A3B8', fontSize: 14,
-            }}>
-            Cancelar
-          </button>
-        </div>
-      </form>
-    </div>
-  )
-}
+        </form>
+      </div>
+    )
+    }
+    
