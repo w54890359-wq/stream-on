@@ -39,4 +39,19 @@ if (process.env.NODE_ENV === 'production') {
 
 try { await migrate() } catch(e) { console.error('Migration error:', e) }
 
-app.listen(PORT, '0.0.0.0', () => console.log('STREAM-ON port', PORT))
+app.listen(PORT, '0.0.0.0', () => {
+  console.log('STREAM-ON port', PORT)
+
+  // Keep-alive: ping every 14 minutes so Render free tier never sleeps
+  if (process.env.NODE_ENV === 'production') {
+    const SITE_URL = 'https://stream-on-e9s1.onrender.com/api/config'
+    setInterval(async () => {
+      try {
+        await fetch(SITE_URL)
+        console.log('[keep-alive] ping ok')
+      } catch (e) {
+        console.log('[keep-alive] ping error:', e)
+      }
+    }, 14 * 60 * 1000)
+  }
+})
