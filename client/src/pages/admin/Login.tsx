@@ -72,7 +72,7 @@ export default function AdminLogin() {
             <input
               className="admin-input"
               type="text"
-              placeholder="streamon001"
+              placeholder="Usuario"
               value={form.username}
               onChange={e => setForm(f => ({ ...f, username: e.target.value }))}
               required
