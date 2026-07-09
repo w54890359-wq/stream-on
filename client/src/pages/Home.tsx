@@ -208,6 +208,50 @@ export default function Home() {
         </div>
       </section>
 
+
+      {/* RESEÑAS */}
+      <section style={{ background: '#0F172A', padding: '70px 24px' }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+          <h2 style={{ textAlign: 'center', fontSize: 30, fontWeight: 800, color: 'white', marginBottom: 8 }}>
+            Lo que dicen nuestros clientes
+          </h2>
+          <p style={{ textAlign: 'center', color: '#64748B', fontSize: 15, marginBottom: 48 }}>
+            Miles de clientes satisfechos confían en nosotros
+          </p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 20 }}>
+            {[
+              { name: 'Carlos M.', platform: 'Netflix', text: 'Excelente servicio, llevo 3 meses con Netflix y nunca ha fallado. 100% recomendado 🔥', avatar: 'CM' },
+              { name: 'Valentina R.', platform: 'Disney+', text: 'Compré Disney+ y llegó al instante. Muy buen precio y atención rápida por WhatsApp.', avatar: 'VR' },
+              { name: 'Andrés G.', platform: 'HBO Max', text: 'Ya van 2 cuentas que compro aquí. Todo perfecto, entrega inmediata y sin problemas.', avatar: 'AG' },
+              { name: 'Luisa F.', platform: 'Netflix', text: 'Pagué y en minutos ya tenía mi cuenta activa. Súper confiable ✅', avatar: 'LF' },
+              { name: 'Miguel T.', platform: 'Prime Video', text: 'El mejor precio que encontré. Llevo meses sin ningún inconveniente. Los recomiendo.', avatar: 'MT' },
+              { name: 'Daniela C.', platform: 'Crunchyroll', text: 'Pregunté por WhatsApp y me respondieron de inmediato. Muy profesionales.', avatar: 'DC' },
+              { name: 'Jorge P.', platform: 'Spotify', text: 'Compré Spotify premium y va perfecto. Precio muy accesible. Ya recomendé a mis amigos.', avatar: 'JP' },
+              { name: 'Mariana S.', platform: 'HBO Max', text: 'Todo llegó tal como lo prometieron. La cuenta funciona perfecto. Muy satisfecha 😊', avatar: 'MS' },
+              { name: 'Sebastián L.', platform: 'Netflix', text: 'Llevo 6 meses siendo cliente y nunca he tenido problemas. Los mejores del mercado.', avatar: 'SL' },
+            ].map((r, i) => (
+              <div key={i} style={{ background: '#1E293B', borderRadius: 16, padding: 24, border: '1px solid #334155', display: 'flex', flexDirection: 'column', gap: 14 }}>
+                <div style={{ display: 'flex', gap: 3 }}>
+                  {[1,2,3,4,5].map(s => (
+                    <svg key={s} width='16' height='16' viewBox='0 0 24 24' fill='#FBBF24'>
+                      <path d='M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z'/>
+                    </svg>
+                  ))}
+                </div>
+                <p style={{ color: '#CBD5E1', fontSize: 14, lineHeight: 1.6, flex: 1 }}>{r.text}</p>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <div style={{ width: 38, height: 38, borderRadius: '50%', background: 'linear-gradient(135deg, #00C2FF, #8B5CF6)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: 'white' }}>{r.avatar}</div>
+                  <div>
+                    <div style={{ color: 'white', fontWeight: 600, fontSize: 14 }}>{r.name}</div>
+                    <div style={{ color: '#8B5CF6', fontSize: 12 }}>{r.platform}</div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* FOOTER */}
       <footer style={{
         background: '#1A1A2E',
