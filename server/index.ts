@@ -16,6 +16,7 @@ declare module 'express-session' {
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 const app = express()
+app.set('trust proxy', 1)
 const PORT = parseInt(process.env.PORT || '3001', 10)
 
 app.use(cors({ origin: true, credentials: true }))
